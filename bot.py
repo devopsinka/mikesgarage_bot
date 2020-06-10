@@ -10,17 +10,18 @@ from telebot import types
 import config
 import proxyconfig
 
+
 bot = telebot.TeleBot(config.TOKEN)
 proxy = telebot.TeleBot(proxyconfig.apihelper.proxy)
 
 user_dict = {}
-
+x = 17
 
 class User:
     def __init__(self, city):
         self.city = city
 
-        keys = ['fullname', 'phone', 'vin']
+        keys = ['fullname', 'phone', 'vin', 'doit']
 
         for key in keys:
             self.key = None
@@ -31,20 +32,16 @@ class User:
 def send_welcome(message):
     keyboardstart = types.InlineKeyboardMarkup()
     button_registration = types.InlineKeyboardButton(text="Записаться в сервис ⚡️", callback_data="zapis")
-    button_recall_client = types.InlineKeyboardButton(text="Заказать запчасти 🛒", callback_data="zapchasti")
     button_write_to_us = types.InlineKeyboardButton(text="Заказать звонок 📱️", callback_data="recall")
     keyboardstart.add(button_registration)
-    keyboardstart.add(button_recall_client)
     keyboardstart.add(button_write_to_us)
-    bot.send_message(message.chat.id, "Здравствуйте "
+    bot.send_message(message.chat.id, "Здравствуйте, "
                      + message.from_user.first_name + '\n'
                      + "Я виртуальный помощник MikesGarage" + '\n\n'
                      + "Я могу:\n\n"
                      + "- Записаться в сервис\n"
-                     + "- Заказать запчасти\n"
-                     + "- Заказать консультацию\n\n"
+                     + "- Заказать обратный звонок\n\n"
                      + "/start - начать сначала\n"
-                     + "/status - статус заявки\n"
                      , reply_markup=keyboardstart)
 
 
@@ -57,26 +54,45 @@ def send_anytext(message):
 
 
 def process_fullname_step(message):
-    try:
+   try:
         chat_id = message.chat.id
         user_dict[chat_id] = User(message.text)
         user = user_dict[chat_id]
         user.fullname = message.text
+        if not user.fullname.isalpha():
+            msg = bot.reply_to(message, 'Я не смог распознать такое имя\nВведите свое имя правильно')
+            bot.register_next_step_handler(msg, process_fullname_step)
+            return
         msg = bot.send_message(chat_id, 'Напишите ваш VIN')
         bot.register_next_step_handler(msg, process_vin_step)
-
-    except Exception as e:
+        
+   except Exception as e:
         bot.reply_to(message, 'ooops!!')
-
-
+        
 def process_vin_step(message):
     try:
         chat_id = message.chat.id
         user = user_dict[chat_id]
         user.vin = message.text
-        msg = bot.send_message(chat_id, 'Напишите ваш номер телефона')
-        bot.register_next_step_handler(msg, process_phone_step)
+        
+        if len(user.vin) < 17:
+            for x in range(0, len(user.vin), 17):
+                msg = bot.reply_to(message, 'VIN номер состоит из 17 символов\nПопробуйте еще раз')
+                bot.register_next_step_handler(msg, process_vin_step)
+        else:
+            msg = bot.send_message(chat_id, 'Опишиту вашу проблему.\nЕсли вы не знаете что с вашем автомобилем, напишите - диагностика.\nМы проверим ваш автомобиль и отремонтируем')
+            bot.register_next_step_handler(msg, process_what_cando)
 
+    except Exception as e:
+        bot.reply_to(message, 'oops!!')
+
+def process_what_cando(message):
+    try:
+        chat_id = message.chat.id
+        user = user_dict[chat_id]
+        user.doit = message.text
+        msg = bot.send_message(chat_id, 'Какой у вас номер телефона?')
+        bot.register_next_step_handler(msg, process_phone_step)
     except Exception as e:
         bot.reply_to(message, 'oops!!')
 
@@ -86,7 +102,7 @@ def process_phone_step(message):
         chat_id = message.chat.id
         user = user_dict[chat_id]
         user.phone = message.text
-        bot.send_message(chat_id, 'В ближайшее время мы вам позвоним\nОжидайте звонка')
+        bot.send_message(chat_id, 'В ближайшее время мы вам позвоним.\nОжидайте звонка.')
         bot.send_message(config.chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username),
                          parse_mode="Markdown")
 
@@ -95,7 +111,7 @@ def process_phone_step(message):
 
 
 def getRegData(user, title, name):
-    t = Template('$title *$name* \n Имя клиента: *$fullname* \n VIN-номер:*$vin* \n Телефон: *$phone*')
+    t = Template('$title *$name* \n Имя клиента: *$fullname* \n VIN-номер:*$vin* \n Телефон: *$phone* \n Комментарии: *$doit*')
 
     return t.substitute({
         'title': title,
@@ -103,6 +119,7 @@ def getRegData(user, title, name):
         'fullname': user.fullname,
         'vin': user.vin,
         'phone': user.phone,
+        'doit': user.doit,
     })
 
 
