@@ -32,15 +32,12 @@ class User:
 def send_welcome(message):
     keyboardstart = types.InlineKeyboardMarkup()
     button_registration = types.InlineKeyboardButton(text="Записаться в сервис ⚡️", callback_data="zapis")
-    button_write_to_us = types.InlineKeyboardButton(text="Заказать звонок 📱️", callback_data="recall")
     keyboardstart.add(button_registration)
-    keyboardstart.add(button_write_to_us)
     bot.send_message(message.chat.id, "Здравствуйте, "
                      + message.from_user.first_name + '\n'
                      + "Я виртуальный помощник MikesGarage" + '\n\n'
-                     + "Я могу:\n\n"
-                     + "- Записаться в сервис\n"
-                     + "- Заказать обратный звонок\n\n"
+                     + "Я помогу вам:\n\n"
+                     + "- Записаться в сервис\n\n"
                      + "/start - начать сначала\n"
                      , reply_markup=keyboardstart)
 
@@ -49,7 +46,7 @@ def send_welcome(message):
 def send_anytext(message):
     chat_id = message.message.chat.id
     if message.data == 'zapis':
-        msg = bot.send_message(chat_id, 'Как вас зовут?', parse_mode='HTML')
+       msg = bot.send_message(chat_id, 'Как вас зовут?', parse_mode='HTML')
     bot.register_next_step_handler(msg, process_fullname_step)
 
 
@@ -65,7 +62,7 @@ def process_fullname_step(message):
             return
         msg = bot.send_message(chat_id, 'Напишите ваш VIN')
         bot.register_next_step_handler(msg, process_vin_step)
-        
+
    except Exception as e:
         bot.reply_to(message, 'ooops!!')
         
@@ -93,6 +90,7 @@ def process_what_cando(message):
         user.doit = message.text
         msg = bot.send_message(chat_id, 'Какой у вас номер телефона?')
         bot.register_next_step_handler(msg, process_phone_step)
+
     except Exception as e:
         bot.reply_to(message, 'oops!!')
 
