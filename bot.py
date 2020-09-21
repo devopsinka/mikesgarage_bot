@@ -7,6 +7,7 @@ from telebot import apihelper
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from string import Template
 from telebot import types
+from telegram import replymarkup
 import config
 #import proxyconfig
 
@@ -35,10 +36,8 @@ def send_welcome(message):
     keyboardstart.add(button_registration)
     bot.send_message(message.chat.id, "Здравствуйте, "
                      + message.from_user.first_name + '\n'
-                     + "Я виртуальный помощник MikesGarage" + '\n\n'
-                     + "Я помогу вам:\n\n"
-                     + "- Записаться в сервис\n\n"
-                     + "/start - начать сначала\n"
+                     + "Я виртуальный помощник Василий" + '\n\n'
+                     + "Пока я умею 👇:\n\n"
                      , reply_markup=keyboardstart)
 
 
@@ -71,13 +70,12 @@ def process_vin_step(message):
         chat_id = message.chat.id
         user = user_dict[chat_id]
         user.vin = message.text
-        
         if len(user.vin) < 17:
             for x in range(0, len(user.vin), 17):
                 msg = bot.reply_to(message, 'VIN номер состоит из 17 символов\nПопробуйте еще раз')
                 bot.register_next_step_handler(msg, process_vin_step)
         else:
-            msg = bot.send_message(chat_id, 'Опишиту вашу проблему.\nЕсли вы не знаете что с вашем автомобилем, напишите - диагностика.\nМы проверим ваш автомобиль и отремонтируем')
+            msg = bot.send_message(chat_id, 'Что необходимо сделать?\nНапример: Заказать выхлоп')
             bot.register_next_step_handler(msg, process_what_cando)
 
     except Exception as e:
