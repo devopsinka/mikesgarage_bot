@@ -8,11 +8,11 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from string import Template
 from telebot import types
 import config
-import proxyconfig
+#import proxyconfig
 
 
 bot = telebot.TeleBot(config.TOKEN)
-proxy = telebot.TeleBot(proxyconfig.apihelper.proxy)
+#proxy = telebot.TeleBot(proxyconfig.apihelper.proxy)
 
 user_dict = {}
 x = 17
