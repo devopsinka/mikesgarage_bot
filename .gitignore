@@ -6,6 +6,7 @@ config.py
 proxyconfig.py
 # C extensions
 *.so
+.gitignore
 
 # Distribution / packaging
 .Python
