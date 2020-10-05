@@ -19,30 +19,32 @@ db = mysql.connector.connect(
   user="root",
   password="",
   port = "3306",
-  #database = "mikes_db"
+  database = "mikes_db"
 )
-######Создаем БД#######
-#cursor = db.cursor()
-#cursor.execute("CREATE DATABASE mikes_db")
+
 
 bot = telebot.TeleBot(config.TOKEN)
-#proxy = telebot.TeleBot(proxyconfig.apihelper.proxy)
 
-user_data = {}
-x = 17
+cursor = db.cursor()
+#cursor.execute("CREATE TABLE users (first_name VARCHAR(255), last_name VARCHAR(255))")
+#cursor.execute("ALTER TABLE users ADD COLUMN (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT UNIQUE)")
+
+
+user_data = {'first_name': '','last_name': ''}
+#x = 17
 
 class User:
-    def __init__(self, fullname):
-        self.fullname = fullname,
-        self.surename = ''
-        self.phone = ''
-        self.vin = ''
+    def __init__(self, first_name):
+        self.first_name = first_name,
+        self.last_name = ''
+        #self.phone = ''
+       # self.vin = ''
     
 
-        keys = ['name','fullname','surename', 'phone', 'vin', 'doit']
+        #keys = ['name','first_name','last_name', 'phone', 'vin', 'doit']
 
-        for key in keys:
-            self.key = None
+        #for key in keys:
+            #self.key = None
 
 
 # если /help, /start
@@ -55,10 +57,9 @@ def send_welcome(message):
                   "- Записаться в автомастерскую\n"
                   "- Узнавать статус ремонта\n"
                   "- Личный кабинет\n\n"
-                  "/call_fire - срочный вызов мастера\n"
+                  "Доступные команды:\n"
+                  "/order_a_call - заказать звонок\n"
                   "/contacts - наши контакты\n"
-                  "/callme - заказать звонок\n"
-                  "/status - узнать статус ремонта\n"
                 ))
     time.sleep(1)
     bot.send_message(message.chat.id,
@@ -79,43 +80,42 @@ def send_anytext(message):
     chat_id = message.message.chat.id
     if message.data == 'Yes':
         msg = bot.send_message(chat_id, 'Напишите ваше имя')
-        bot.register_next_step_handler(msg, process_fullname_step)
+        bot.register_next_step_handler(msg, process_first_name_step)
     if message.data == 'No':
-        msg = bot.send_message(chat_id, 'Нам очень жаль, но без регистрации вам доступно\n\n /contacts, /callme')
+        msg = bot.send_message(chat_id, 'Нам очень жаль, но без регистрации вам доступно\n\n /contacts - наши контакты\n / - заказать звонок\n\n'
+        'Нажмите Да 👆, если хотите получить все функции')
 
-def process_fullname_step(message):
+def process_first_name_step(message):
    try:
         chat_id = message.chat.id
-        user_data[chat_id] = User(message.text)
-        user = user_data[chat_id]
-        user.name = message.text
-        
-        if not user.name.isalpha():
-            msg = bot.reply_to(message, 'Я не смог распознать такое имя\nВведите свое имя правильно')
-            bot.register_next_step_handler(msg, process_fullname_step)
-            return
+        user_id = message.from_user.id
+        user_data[user_id].first_name = message.text
+        user = user_data[user_id]
         msg = bot.send_message(chat_id, 'Напишите вашу фамилию')
-        bot.register_next_step_handler(msg, process_surename_step)
+        bot.register_next_step_handler(msg, process_last_name_step)
 
    except Exception as e:
-        bot.reply_to(message, 'ooops!!')
+        print(e)
 
-def process_surename_step(message):
+
+
+
+def process_last_name_step(message):
     try:
         chat_id = message.chat.id
         user = user_data[chat_id]
         user_id = message.from_user.id
-        user_data[user_id] = User(message.text)
-        user.surename = message.text
-        if not user.surename.isalpha():
-            msg = bot.reply_to(message, 'Я не смог распознать вашу фамилию\nВведите фамилию правильно')
-            bot.register_next_step_handler(msg, process_surename_step)
-            return
+        user_data[user_id].last_name = message.text
         msg = bot.send_message(chat_id, 'Напишите ваш VIN номер')
+        sql = "INSERT INTO users (first_name, last_name, user_id) \
+                                  VALUES (%s, %s, %s)"
+        val = (user.first_name, user.last_name, user_id)
+        cursor.execute(sql, val)
+        db.commit()
         bot.register_next_step_handler(msg, process_vin_step)
 
     except Exception as e:
-        bot.reply_to(message, 'ooops!!')
+        print(e)
         
 def process_vin_step(message):
     try:
@@ -128,7 +128,7 @@ def process_vin_step(message):
                 msg = bot.reply_to(message, 'VIN номер состоит из 17 символов\nПопробуйте еще раз')
                 bot.register_next_step_handler(msg, process_vin_step)
         else:
-            msg = bot.send_message(chat_id, 'Что необходимо сделать?\nНапример: Заказать выхлоп')
+            msg = bot.send_message(chat_id, 'Что необходимо сделать?\n\nНапример: Заказать выхлоп')
             bot.register_next_step_handler(msg, process_what_cando)
 
     except Exception as e:
@@ -154,16 +154,6 @@ def process_phone_step(message):
         user = user_data[chat_id]
         user.phone = message.text
         bot.send_message(chat_id, 'Спасибо за регистрацию!\nВ ближайшее время мы вам позвоним.\n\nТеперь вам доступен личный кабинет.')
-        mike_placeholders = "INSERT INTO users (fullname, phone, vin, user_id) \
-                                  VALUES (%s, %s, %s) "
-        records_list = (user.fullname, user.phone, user.vin, user_id )
-
-        #cursor.execute(sql, sum(val))     
-        for values in records_list:
-            cursor.execute(mike_placeholders, values)
-
-
-        db.commit()
         bot.send_message(config.chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username),
                          parse_mode="Markdown")
 
@@ -172,13 +162,13 @@ def process_phone_step(message):
 
 
 def getRegData(user, title, name):
-    t = Template('$title *$name* \n Имя клиента: *$fullname* \n Фамилия клиента: *$surename* \n VIN-номер:*$vin* \n Телефон: *$phone* \n Комментарии: *$doit*')
+    t = Template('$title *$name* \n Имя клиента: *$first_name* \n Фамилия клиента: *$last_name* \n VIN-номер:*$vin* \n Телефон: *$phone* \n Комментарии: *$doit*')
 
     return t.substitute({
         'title': title,
         'name': name,
-        'fullname': user.name,
-        'surename': user.surename,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
         'vin': user.vin,
         'phone': user.phone,
         'doit': user.doit,
