@@ -37,8 +37,7 @@ class User:
     def __init__(self, first_name):
         self.first_name = first_name,
         self.last_name = ''
-        #self.phone = ''
-       # self.vin = ''
+ 
     
 
         #keys = ['name','first_name','last_name', 'phone', 'vin', 'doit']
@@ -106,11 +105,6 @@ def process_last_name_step(message):
         user = user_data[chat_id]
         user_id = message.from_user.id
         user_data[user_id].last_name = message.text
-        msg = bot.send_message(chat_id, 'Напишите ваш VIN номер')
-        sql = "INSERT INTO users (first_name, last_name, user_id) \
-                                  VALUES (%s, %s, %s)"
-        val = (user.first_name, user.last_name, user_id)
-        cursor.execute(sql, val)
         db.commit()
         bot.register_next_step_handler(msg, process_vin_step)
 
