@@ -30,7 +30,7 @@ cursor = db.cursor()
 #cursor.execute("ALTER TABLE users ADD COLUMN (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT UNIQUE)")
 
 
-user_data = {'first_name': '','last_name': ''}
+user_data = {}
 #x = 17
 
 class User:
@@ -40,10 +40,10 @@ class User:
  
     
 
-        #keys = ['name','first_name','last_name', 'phone', 'vin', 'doit']
+        keys = ['name','first_name','last_name', 'phone', 'vin', 'doit']
 
-        #for key in keys:
-            #self.key = None
+        for key in keys:
+            self.key = None
 
 
 # если /help, /start
@@ -86,11 +86,10 @@ def send_anytext(message):
 
 def process_first_name_step(message):
    try:
-        chat_id = message.chat.id
         user_id = message.from_user.id
-        user_data[user_id].first_name = message.text
-        user = user_data[user_id]
-        msg = bot.send_message(chat_id, 'Напишите вашу фамилию')
+        user_data[user_id] = User(message.text)
+
+        msg = bot.send_message(message.chat.id, 'Напишите вашу фамилию')
         bot.register_next_step_handler(msg, process_last_name_step)
 
    except Exception as e:
@@ -101,11 +100,10 @@ def process_first_name_step(message):
 
 def process_last_name_step(message):
     try:
-        chat_id = message.chat.id
-        user = user_data[chat_id]
         user_id = message.from_user.id
-        user_data[user_id].last_name = message.text
-        db.commit()
+        user = user_data[user_id]
+        user.last_name = message.text
+        msg = bot.send_message(message.chat.id, 'Напишите ваш VIN')
         bot.register_next_step_handler(msg, process_vin_step)
 
     except Exception as e:
@@ -113,27 +111,23 @@ def process_last_name_step(message):
         
 def process_vin_step(message):
     try:
-        chat_id = message.chat.id
         user_id = message.from_user.id
-        user = user_data[chat_id]
-        user.vin = message.text
-        if len(user.vin) < 17:
-            for x in range(0, len(user.vin), 17):
-                msg = bot.reply_to(message, 'VIN номер состоит из 17 символов\nПопробуйте еще раз')
-                bot.register_next_step_handler(msg, process_vin_step)
-        else:
-            msg = bot.send_message(chat_id, 'Что необходимо сделать?\n\nНапример: Заказать выхлоп')
-            bot.register_next_step_handler(msg, process_what_cando)
+        user = user_data[user_id]
+        user.user_vin = message.text
+
+        msg = bot.send_message(message.chat.id, 'Что необходимо сделать?\n\nНапример: Заказать выхлоп')
+        bot.register_next_step_handler(msg, process_what_cando)
 
     except Exception as e:
         bot.reply_to(message, 'oops!!')
 
 def process_what_cando(message):
     try:
-        chat_id = message.chat.id
-        user = user_data[chat_id]
+        user_id = message.from_user.id
+        user = user_data[user_id]
         user.doit = message.text
-        msg = bot.send_message(chat_id, 'Какой у вас номер телефона?')
+
+        msg = bot.send_message(message.chat.id, 'Какой у вас номер телефона?')
         bot.register_next_step_handler(msg, process_phone_step)
 
     except Exception as e:
@@ -143,11 +137,16 @@ def process_what_cando(message):
 
 def process_phone_step(message):
     try:
-        chat_id = message.chat.id
         user_id = message.from_user.id
-        user = user_data[chat_id]
-        user.phone = message.text
-        bot.send_message(chat_id, 'Спасибо за регистрацию!\nВ ближайшее время мы вам позвоним.\n\nТеперь вам доступен личный кабинет.')
+        user = user_data[user_id]
+        user.user_phone = message.text
+        sql = "INSERT INTO users (user_id, first_name, last_name, user_phone, user_vin) \
+                                  VALUES (%s, %s, %s)"
+        val = (user_id ,user.first_name, user.last_name,user.user_phone, user.user_vin)
+        cursor.execute(sql, val)
+        db.commit()
+
+        bot.send_message(message.chat.id, 'Спасибо за регистрацию!\nВ ближайшее время мы вам позвоним.\n\nТеперь вам доступен личный кабинет.')
         bot.send_message(config.chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username),
                          parse_mode="Markdown")
 
@@ -163,8 +162,8 @@ def getRegData(user, title, name):
         'name': name,
         'first_name': user.first_name,
         'last_name': user.last_name,
-        'vin': user.vin,
-        'phone': user.phone,
+        'vin': user.user_vin,
+        'phone': user.user_phone,
         'doit': user.doit,
     })
 
