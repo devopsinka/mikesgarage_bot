@@ -1,6 +1,7 @@
 import telebot
 import os
 import schedule
+import sys
 import time
 import requests
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -9,19 +10,30 @@ from telebot import types
 from telegram import replymarkup
 import config
 import mysql.connector
+from mysql.connector import errorcode
 import logging
 
 logger = telebot.logger
 telebot.logger.setLevel(logging.INFO)
 
-db = mysql.connector.connect(
-  host="localhost",
-  user="root",
-  password="",
-  port = "3306",
-  database = "mikes_db"
-)
-
+try:
+    db = mysql.connector.connect(
+      host="localhost",
+      user="root",
+      passwd="",
+      port="3306",
+      database="mikes_db"
+    )
+except mysql.connector.Error as err:
+  if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+    print("Something is wrong with your user name or password")
+    sys.exit()
+  elif err.errno == errorcode.ER_BAD_DB_ERROR:
+    print("Database does not exist")
+    sys.exit()
+  else:
+    print(err)
+    sys.exit()
 
 bot = telebot.TeleBot(config.TOKEN)
 
@@ -140,12 +152,12 @@ def process_phone_step(message):
         user_id = message.from_user.id
         user = user_data[user_id]
         user.user_phone = message.text
-        sql = "INSERT INTO users (user_id, first_name, last_name, user_phone, user_vin) \
-                                  VALUES (%s, %s, %s)"
-        val = (user_id ,user.first_name, user.last_name,user.user_phone, user.user_vin)
-        cursor.execute(sql, val)
-        db.commit()
+        
+        data = (user_id, user.first_name, user.last_name, user.user_phone, user.user_vin)
 
+        sql = ('INSERT INTO users (user_id, first_name, last_name, user_phone, user_vin) VALUES (%s,%s,%s,%s,%s)' %data)
+        cursor.execute(sql)
+        db.commit()
         bot.send_message(message.chat.id, 'Спасибо за регистрацию!\nВ ближайшее время мы вам позвоним.\n\nТеперь вам доступен личный кабинет.')
         bot.send_message(config.chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username),
                          parse_mode="Markdown")
