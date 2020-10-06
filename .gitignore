@@ -8,6 +8,7 @@ proxyconfig.py
 *.so
 
 .handler-saves/
+.handler-saves
 
 # Distribution / packaging
 .Python
