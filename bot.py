@@ -1,3 +1,4 @@
+from logging import debug
 import telebot
 import os
 import schedule
@@ -50,8 +51,6 @@ class User:
         self.first_name = first_name,
         self.last_name = ''
  
-    
-
         keys = ['name','first_name','last_name', 'phone', 'vin', 'doit']
 
         for key in keys:
@@ -153,17 +152,20 @@ def process_phone_step(message):
         user = user_data[user_id]
         user.user_phone = message.text
         
+        
         data = (user_id, user.first_name, user.last_name, user.user_phone, user.user_vin)
-
-        sql = ('INSERT INTO users (user_id, first_name, last_name, user_phone, user_vin) VALUES (%s,%s,%s,%s,%s)' %data)
+        sql = ('INSERT INTO users (user_id, last_name, user_phone, user_vin) VALUES (%s,%s,%s,%s,%s)', data)
         cursor.execute(sql)
+
         db.commit()
         bot.send_message(message.chat.id, 'Спасибо за регистрацию!\nВ ближайшее время мы вам позвоним.\n\nТеперь вам доступен личный кабинет.')
         bot.send_message(config.chat_id, getRegData(user, 'Заявка от бота', bot.get_me().username),
                          parse_mode="Markdown")
 
+    
     except Exception as e:
         print(e)
+  
 
 
 def getRegData(user, title, name):
